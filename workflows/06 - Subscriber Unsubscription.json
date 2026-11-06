@@ -1,0 +1,289 @@
+{
+  "name": "06 - Subscriber Unsubscription",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Unsubscribe from Choose Your Quote",
+        "formDescription": "We're sorry to see you go. Please confirm your request to stop receiving quotations.",
+        "formFields": {
+          "values": [
+            {
+              "fieldType": "hiddenField",
+              "fieldName": "token"
+            },
+            {
+              "fieldLabel": "Why are you leaving? (Optional)",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9b11eb2d-8f4b-48e6-af47-2984ff21c6e4",
+      "name": "Unsubscribe Form"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RESELECT_SHEET_SUBSCRIBERS",
+          "mode": "id"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Unsubscribe Token",
+              "lookupValue": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        176,
+        0
+      ],
+      "id": "dc6d72ec-0d61-4e7b-a913-1a9dd60b3256",
+      "name": "Find Subscriber by Token",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "fdd1ffa8-8d10-4a33-b830-872c925b9d1b",
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        352,
+        0
+      ],
+      "id": "478d12fc-37c9-47bd-838d-4e3da0f7c825",
+      "name": "Subscriber Found?"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RESELECT_SHEET_UNSUBSCRIPTION_RECORDS",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Unsubscribed At": "={{ $now.setZone('Europe/London').toISO() }}",
+            "Email": "={{ $json.Email }}",
+            "Feedback": "={{ $('Unsubscribe Form').item.json['Why are you leaving? (Optional)'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unsubscribed At",
+              "displayName": "Unsubscribed At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Feedback",
+              "displayName": "Feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        -96
+      ],
+      "id": "bd3475ad-eea3-4655-8767-f7a386c93afd",
+      "name": "Record Unsubscription"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RESELECT_SHEET_SUBSCRIBERS",
+          "mode": "id"
+        },
+        "startIndex": "={{ $('Find Subscriber by Token').item.json.row_number }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        752,
+        -96
+      ],
+      "id": "71c1be80-0f2c-4111-be9a-d6c50488a89e",
+      "name": "Delete Subscriber"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "showText",
+        "responseText": "=<div style=\"max-width:500px; margin:80px auto; font-family:Arial,sans-serif; text-align:center; line-height:1.6; padding:20px;\">\n  <h2>Unsubscription successful</h2>\n\n  <p>Your subscription to Choose Your Quote has been cancelled.</p>\n\n  <p>You will no longer receive quotation emails.</p>\n\n  <p style=\"color:#777; font-size:14px;\">\n    Thank you for being part of Choose Your Quote.\n  </p>\n\n  <p style=\"color:#777; font-size:14px;\">\n    You can now close this page.\n  </p>\n</div>"
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        912,
+        -96
+      ],
+      "id": "82ae06e1-82d1-4b85-afd3-a5ba0cd221e0",
+      "name": "Unsubscription Successful"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "showText",
+        "responseText": "=<div style=\"max-width:500px; margin:80px auto; font-family:Arial,sans-serif; text-align:center; line-height:1.6; padding:20px;\">\n  <h2>Unable to process your request</h2>\n\n  <p>This unsubscribe link is invalid or has already been used.</p>\n\n  <p>If you have already unsubscribed, no further action is required.</p>\n\n  <p style=\"color:#777; font-size:14px;\">\n    You can now close this page.\n  </p>\n</div>"
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        576,
+        96
+      ],
+      "id": "3236e944-62f3-46c4-b2b5-6ce3d163cb13",
+      "name": "Invalid Unsubscribe Token"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Unsubscribe Form": {
+      "main": [
+        [
+          {
+            "node": "Find Subscriber by Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Subscriber by Token": {
+      "main": [
+        [
+          {
+            "node": "Subscriber Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subscriber Found?": {
+      "main": [
+        [
+          {
+            "node": "Record Unsubscription",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Unsubscribe Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Unsubscription": {
+      "main": [
+        [
+          {
+            "node": "Delete Subscriber",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Subscriber": {
+      "main": [
+        [
+          {
+            "node": "Unsubscription Successful",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

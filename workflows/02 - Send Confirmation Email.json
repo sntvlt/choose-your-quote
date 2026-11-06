@@ -1,0 +1,70 @@
+{
+  "name": "02 - Send Confirmation Email",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "email"
+            },
+            {
+              "name": "action"
+            },
+            {
+              "name": "verificationToken"
+            },
+            {
+              "name": "expiresAt"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -432,
+        -16
+      ],
+      "id": "5cb6c37b-a292-4897-a62a-af1c16f25fc9",
+      "name": "Get Data From Registration"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get Data From Registration').item.json.email }}",
+        "subject": "={{ $json.action === 'Verify Email' ? 'Confirm Your Email Address' : 'Confirm Your Subscription Update' }}",
+        "message": "= {{ ` <div style=\"font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#242424;line-height:1.6;text-align:center;\">    <h2>${$json.action === 'Verify Email'     ? 'Confirm your email address'     : 'Confirm your subscription update'}</h2>    <p>${$json.action === 'Verify Email'     ? 'Thank you for joining Choose Your Quote. Please confirm your email address to activate your subscription.'     : 'We received a request to update your Choose Your Quote preferences. Please confirm this change.'}</p>    <p style=\"margin:30px 0\">     <a href=\"https://YOUR_N8N_DOMAIN/webhook/confirm-subscription?token=${encodeURIComponent($json.verificationToken)}\"        style=\"background:#252525;color:#ffffff;padding:14px 24px;text-decoration:none;border-radius:6px;display:inline-block;font-weight:bold\">       ${$json.action === 'Verify Email'         ? 'Verify my email'         : 'Confirm my update'}     </a>   </p>    <p>This confirmation link expires after 24 hours.</p>    <p>If you did not make this request, you can ignore this email.</p>    <p>Choose Your Quote</p> </div> ` }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -208,
+        -16
+      ],
+      "id": "c2e73e94-8e25-47fd-af5f-1fe28ec8a3df",
+      "name": "Send Confirmation Email"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Data From Registration": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

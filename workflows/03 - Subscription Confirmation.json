@@ -1,0 +1,655 @@
+{
+  "name": "03 - Subscription Confirmation",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "confirm-subscription",
+        "responseMode": "responseNode",
+        "options": {
+          "ignoreBots": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -352,
+        0
+      ],
+      "id": "7e718856-e15f-4f90-b383-265adebfae37",
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "value": "={{ $json.query.token }}",
+        "dataPropertyName": "tokenHash"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "63d5b2fa-c9e1-4a52-bdfe-bbde9ba2882e",
+      "name": "Hash Received Token"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Request received. You'll receive a confirmation email.\nYou can now close this page.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -192,
+        0
+      ],
+      "id": "993cf809-bff7-4621-9e2e-bc9026c51c86",
+      "name": "Acknowledge Request"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RESELECT_SHEET_PENDING_REQUESTS",
+          "mode": "id"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Token Hash",
+              "lookupValue": "={{ $('Hash Received Token').item.json.tokenHash }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        0
+      ],
+      "id": "f44a59ee-d6fd-44eb-8800-11c1ffce746e",
+      "name": "Find Pending Request",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3ca7c4ae-4107-4bd9-a7c9-0664b1ad2166",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        320,
+        0
+      ],
+      "id": "3d858620-c44e-4960-9e52-e2ca6ab9b45b",
+      "name": "Token Found?",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "808cd676-f12a-4d6c-82f8-78a69fcbdc4b",
+              "name": "status",
+              "value": "rejected",
+              "type": "string"
+            },
+            {
+              "id": "c215cdb5-0ef5-4c7d-ba99-52119a1536c6",
+              "name": "message",
+              "value": "Token not found!",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        496,
+        160
+      ],
+      "id": "eedba01c-635e-4000-82fb-366b6b1c5e1b",
+      "name": "Invalid Token - End Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "60813d22-c7ee-471d-a3f4-031ac563d272",
+              "leftValue": "={{ $json[\"Expires At\"] }}",
+              "rightValue": "={{ $now.toISO() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        496,
+        -96
+      ],
+      "id": "85984805-3a88-4fe0-a1c1-1abc4f685880",
+      "name": "Token Not Expired?"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "Your subscription request has expired",
+        "message": "Your confirmation link has expired.  \n\nPlease submit a new request to subscribe to Choose Your Quote or update your existing preferences.  \n\nThis is an automated message. No further action is required if you no longer wish to proceed.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        48
+      ],
+      "id": "374be07b-842c-451e-bcf9-16c7e17eb759",
+      "name": "Send Expiry Notification",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RESELECT_SHEET_PENDING_REQUESTS",
+          "mode": "id"
+        },
+        "startIndex": "={{ $('Token Not Expired?').item.json.row_number }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        912,
+        48
+      ],
+      "id": "cfd0f23e-5834-45d7-ae30-59dc38c1d3ba",
+      "name": "Delete rows from Pending Requests"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "366c8a75-4d64-4c1a-b36e-e685da2c4c59",
+              "leftValue": "={{ $json.Action }}",
+              "rightValue": "Verify Email",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        736,
+        -240
+      ],
+      "id": "b9dd74dd-000a-45dc-8f51-7e6fc41a3fa1",
+      "name": "New Subscription?"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RESELECT_SHEET_SUBSCRIBERS",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.Email }}",
+            "Quote Category": "={{ $json[\"Quote Category\"] }}",
+            "Frequency": "={{ $json.Frequency }}",
+            "submittedAt": "={{ $json.submittedAt }}",
+            "Unsubscribe Token": "={{ $json.unsubscribeToken }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Quote Category",
+              "displayName": "Quote Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Frequency",
+              "displayName": "Frequency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "submittedAt",
+              "displayName": "submittedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unsubscribe Token",
+              "displayName": "Unsubscribe Token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1104,
+        -336
+      ],
+      "id": "4dd98d5d-4ed6-4fb8-9479-0cab95a044a7",
+      "name": "Create New Subscriber"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RESELECT_SHEET_SUBSCRIBERS",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.Email }}",
+            "Quote Category": "={{ $json[\"Quote Category\"] }}",
+            "Frequency": "={{ $json.Frequency }}",
+            "submittedAt": "={{ $json.submittedAt }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Quote Category",
+              "displayName": "Quote Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Frequency",
+              "displayName": "Frequency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "submittedAt",
+              "displayName": "submittedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1104,
+        -160
+      ],
+      "id": "60f69874-9811-41b9-be49-dca097cec755",
+      "name": "Update Existing Subscriber"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEETS_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "RESELECT_SHEET_PENDING_REQUESTS",
+          "mode": "id"
+        },
+        "startIndex": "={{ $('Find Pending Request').first().json.row_number }}"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1312,
+        -256
+      ],
+      "id": "19700a5d-dfce-483b-a151-bf44f86a9eee",
+      "name": "Delete Confirmed Pending Request",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Find Pending Request').first().json.Email }}",
+        "subject": "={{ $('Find Pending Request').first().json.Action === 'Verify Email'   ? 'Your email has been verified'   : 'Your subscription preferences have been updated' }}",
+        "emailType": "text",
+        "message": "={{ $('Find Pending Request').first().json.Action === 'Verify Email'\n  ? 'Your email has been verified successfully. Your Choose Your Quote subscription is now active.'\n  : 'Your Choose Your Quote subscription preferences have been successfully updated.' }}\n\nThank you for using Choose Your Quote.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -256
+      ],
+      "id": "b162f89b-c573-43e1-bd50-f9be2f32b2dd",
+      "name": "Send Success Confirmation",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "action": "generate",
+        "dataPropertyName": "unsubscribeToken",
+        "encodingType": "hex",
+        "stringLength": 64
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 2,
+      "position": [
+        912,
+        -336
+      ],
+      "id": "e9a1f92b-8e5e-422a-9cfd-101660431141",
+      "name": "Generate Unsubscribe Token"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge Request": {
+      "main": [
+        [
+          {
+            "node": "Hash Received Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hash Received Token": {
+      "main": [
+        [
+          {
+            "node": "Find Pending Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Pending Request": {
+      "main": [
+        [
+          {
+            "node": "Token Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token Found?": {
+      "main": [
+        [
+          {
+            "node": "Token Not Expired?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Token - End Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token Not Expired?": {
+      "main": [
+        [
+          {
+            "node": "New Subscription?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Expiry Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Expiry Notification": {
+      "main": [
+        [
+          {
+            "node": "Delete rows from Pending Requests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New Subscription?": {
+      "main": [
+        [
+          {
+            "node": "Generate Unsubscribe Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Existing Subscriber",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Existing Subscriber": {
+      "main": [
+        [
+          {
+            "node": "Delete Confirmed Pending Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Subscriber": {
+      "main": [
+        [
+          {
+            "node": "Delete Confirmed Pending Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Confirmed Pending Request": {
+      "main": [
+        [
+          {
+            "node": "Send Success Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Unsubscribe Token": {
+      "main": [
+        [
+          {
+            "node": "Create New Subscriber",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
